@@ -18,6 +18,21 @@ def get_dataloader(args, normalizer='std', tod=False, dow=False, single=False):
     data = load_st_dataset(args.dataset, args.input_dim)
     # 2.数据归一化处理
     data, scaler = normalize_dataset(data, normalizer)
+
+    # [Add] tod and dow feature
+    _, n, _ = data.shape
+    if tod:
+        tod = [i % args.steps_per_day / args.steps_per_day for i in range(data.shape[0])]
+        tod = np.array(tod)
+        tod_tiled = np.tile(tod, [1, n, 1]).transpose((2, 1, 0))
+        data = np.concatenate((data, tod_tiled), axis=2)
+
+    if dow:
+        dow = [(i // args.steps_per_day) % 7 for i in range(data.shape[0])]
+        dow = np.array(dow)
+        dow_tiled = np.tile(dow, [1, n, 1]).transpose((2, 1, 0))
+        data = np.concatenate((data, dow_tiled), axis=2)
+
     # 3.数据集划分(训练集、验证集、测试集)
     if args.test_ratio > 1:
         train_data, val_data, test_data = split_data_by_days(data, args.val_ratio, args.test_ratio)
@@ -42,8 +57,8 @@ def get_dataloader(args, normalizer='std', tod=False, dow=False, single=False):
 
 if __name__ == '__main__':
     import argparse
-    DATASET = 'PEMSD4'
-    NODE_NUM = 307
+    DATASET = 'PEMSD8'
+    NODE_NUM = 170
     parser = argparse.ArgumentParser(description='PyTorch dataloader')
     parser.add_argument('--dataset', default=DATASET, type=str)
     parser.add_argument('--input_dim', default=1, type=str)
@@ -53,9 +68,10 @@ if __name__ == '__main__':
     parser.add_argument('--window', default=12, type=int)
     parser.add_argument('--horizon', default=12, type=int)
     parser.add_argument('--batch_size', default=64, type=int)
+    parser.add_argument('--steps_per_day', default=288, type=int)
     args = parser.parse_args()
-    train_dataloader, val_dataloader, test_dataloader, scaler = get_dataloader(args, 
-                                                                               normalizer='std', 
+    train_dataloader, val_dataloader, test_dataloader, scaler = get_dataloader(args,
+                                                                               normalizer='std',
                                                                                tod=False,
-                                                                               dow=False, 
+                                                                               dow=False,
                                                                                single=False)
